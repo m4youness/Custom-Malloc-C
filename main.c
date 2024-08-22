@@ -93,25 +93,6 @@ void *heap_alloc(size_t size) {
   return NULL;
 }
 
-void heap_free(void *ptr) {
-  if (ptr != NULL) {
-    const int index = chunk_list_find(&alloced_chunks, ptr);
-    if (index != -1) {
-      chunk_list_insert(&freed_chunks, alloced_chunks.chunks[index].start,
-                        alloced_chunks.chunks[index].size);
-      chunk_list_remove(&alloced_chunks, (size_t)index);
-    }
-  }
-}
-
-void chunk_list_dump(Chunk_List *list) {
-  printf("Chunks (%zu):\n", list->count);
-  for (size_t i = 0; i < list->count; i++) {
-    printf("pointer = %p, size = %zu\n", list->chunks[i].start,
-           list->chunks[i].size);
-  }
-}
-
 void chunk_list_merge(Chunk_List *src) {
   Chunk_List dst = {0};
   size_t merge_size = 0;
@@ -139,6 +120,26 @@ void chunk_list_merge(Chunk_List *src) {
   *src = dst;
 }
 
+void heap_free(void *ptr) {
+  if (ptr != NULL) {
+    const int index = chunk_list_find(&alloced_chunks, ptr);
+    if (index != -1) {
+      chunk_list_insert(&freed_chunks, alloced_chunks.chunks[index].start,
+                        alloced_chunks.chunks[index].size);
+      chunk_list_remove(&alloced_chunks, (size_t)index);
+
+      chunk_list_merge(&freed_chunks);
+    }
+  }
+}
+
+void chunk_list_dump(Chunk_List *list) {
+  printf("Chunks (%zu):\n", list->count);
+  for (size_t i = 0; i < list->count; i++) {
+    printf("pointer = %p, size = %zu\n", list->chunks[i].start,
+           list->chunks[i].size);
+  }
+}
 int main() {
   void *ptr = heap_alloc(123);
   void *ptr1 = heap_alloc(420);
@@ -148,8 +149,6 @@ int main() {
   heap_free(ptr1);
   heap_free(ptr2);
 
-  chunk_list_dump(&freed_chunks);
-  chunk_list_merge(&freed_chunks);
   chunk_list_dump(&freed_chunks);
 
   return 0;
